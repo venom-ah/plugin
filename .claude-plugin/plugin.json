@@ -1,12 +1,12 @@
 {
-  "name": "morph",
-  "version": "0.1.1",
-  "description": "Connects agents to Morph's organization brain, skills, directory, and governed Catalogue through MCP.",
+  "name": "venom",
+  "version": "0.2.0",
+  "description": "Connects agents to Venom's organization brain and directory through MCP.",
   "author": {
-    "name": "Morph",
-    "url": "https://github.com/morphhq-co"
+    "name": "Venom",
+    "url": "https://github.com/venom-ah"
   },
-  "homepage": "https://morphhq.co",
-  "repository": "https://github.com/morphhq-co/plugin",
+  "homepage": "https://venom-ah.com",
+  "repository": "https://github.com/venom-ah/plugin",
   "mcpServers": "./.mcp.json"
 }

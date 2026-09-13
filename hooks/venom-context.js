@@ -9,7 +9,7 @@ const event = process.argv[2];
 function main() {
   if (event !== 'SessionStart' && event !== 'SubagentStart') return;
 
-  let context = fs.readFileSync(path.join(__dirname, '..', 'MORPH.md'), 'utf8').trim();
+  let context = fs.readFileSync(path.join(__dirname, '..', 'VENOM.md'), 'utf8').trim();
   if (event === 'SubagentStart') {
     context += '\n\nAs a subagent, use shared context when relevant and return durable findings to the parent agent. Do not create a competing task record.';
   }

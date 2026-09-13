@@ -1,33 +1,43 @@
 {
-  "name": "morph",
-  "version": "0.1.1",
-  "description": "Connects agents to Morph's organization brain, skills, directory, and governed Catalogue through MCP.",
+  "name": "venom",
+  "version": "0.2.0",
+  "description": "Connects agents to Venom's organization brain and directory through MCP.",
   "author": {
-    "name": "Morph",
-    "url": "https://github.com/morphhq-co"
+    "name": "Venom",
+    "url": "https://github.com/venom-ah"
   },
-  "homepage": "https://morphhq.co",
-  "repository": "https://github.com/morphhq-co/plugin",
-  "keywords": ["morph", "brain", "knowledge", "mcp"],
+  "homepage": "https://venom-ah.com",
+  "repository": "https://github.com/venom-ah/plugin",
+  "keywords": [
+    "venom",
+    "brain",
+    "knowledge",
+    "context",
+    "mcp"
+  ],
   "mcpServers": {
-    "morph": {
+    "venom": {
       "type": "http",
-      "url": "https://mcp.dev.morphhq.co"
+      "url": "https://mcp.dev.venom-ah.com"
     }
   },
   "hooks": "./hooks/hooks.json",
   "interface": {
-    "displayName": "Morph",
-    "shortDescription": "Your organization's shared brain and software catalogue",
-    "longDescription": "Connects Codex to Morph's organization-scoped brain files, skills, people and Teams, and governed software Catalogue.",
-    "developerName": "Morph",
+    "displayName": "Venom",
+    "shortDescription": "Your organization's shared brain",
+    "longDescription": "Connects Codex to Venom's organization-scoped brain files and to the people and Teams directory, so work stays grounded in shared context.",
+    "developerName": "Venom",
     "category": "Knowledge",
-    "capabilities": ["MCP", "Instructions", "Lifecycle hooks"],
-    "websiteURL": "https://morphhq.co",
+    "capabilities": [
+      "MCP",
+      "Instructions",
+      "Lifecycle hooks"
+    ],
+    "websiteURL": "https://venom-ah.com",
     "defaultPrompt": [
-      "Start this task with Morph context and keep its handoff current.",
-      "Find and load the Morph skill relevant to this task.",
-      "Inspect the current governed software Catalogue."
+      "Start this task with Venom context and keep its handoff current.",
+      "Search the brain for what we already know about this.",
+      "Write up what you decided so the next agent can resume."
     ]
   }
 }

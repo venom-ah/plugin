@@ -1,55 +1,55 @@
-# Morph agent plugin
+# Venom agent plugin
 
 Connect your coding agent to your organization's shared
-[Morph](https://morphhq.co) brain.
+[Venom](https://venom-ah.com) brain.
 
-The plugin bundles the Morph MCP server at `https://mcp.dev.morphhq.co`. On
-Codex and Claude Code it also reminds the agent to use Morph throughout
+The plugin bundles the Venom MCP server at `https://mcp.dev.venom-ah.com`. On
+Codex and Claude Code it also reminds the agent to use Venom throughout
 substantive work. Your agent host owns OAuth and the MCP connection; the plugin
 stores no credentials and runs no background code.
 
-Morph provides organization-scoped brain files, skills, people and Teams, and
-a governed software Catalogue. The MCP server tells the agent how to use these
-capabilities when the connection starts.
+Venom gives agents an organization-scoped filesystem of notes, plus the people
+and Teams directory. Files carry Unix-style ownership and permissions, so an
+agent sees exactly what the person it acts for is allowed to see.
 
 ## Install
 
 ### Claude Code
 
 ```text
-/plugin marketplace add morphhq-co/plugin
-/plugin install morph@morph
+/plugin marketplace add venom-ah/plugin
+/plugin install venom@venom
 ```
 
-Claude Code prompts for Morph authorization when the connection is first used.
+Claude Code prompts for Venom authorization when the connection is first used.
 Review and trust the bundled lifecycle hooks when prompted.
 
 ### Codex
 
 ```bash
-codex plugin marketplace add morphhq-co/plugin
-codex plugin add morph@morph
+codex plugin marketplace add venom-ah/plugin
+codex plugin add venom@venom
 ```
 
-Start a new task after installation. Codex prompts for Morph authorization when
+Start a new task after installation. Codex prompts for Venom authorization when
 the connection is first used. Review and trust the bundled lifecycle hooks when
 prompted.
 
 ### Gemini CLI
 
 ```bash
-gemini extensions install https://github.com/morphhq-co/plugin
+gemini extensions install https://github.com/venom-ah/plugin
 ```
 
 ### GitHub Copilot CLI
 
-Add Morph to `~/.copilot/mcp-config.json`:
+Add Venom to `~/.copilot/mcp-config.json`:
 
 ```json
 {
   "mcpServers": {
-    "morph": {
-      "url": "https://mcp.dev.morphhq.co"
+    "venom": {
+      "url": "https://mcp.dev.venom-ah.com"
     }
   }
 }
@@ -64,9 +64,9 @@ for the project or into `~/.cursor/`.
 
 Merge [`platforms/kiro/mcp.json`](platforms/kiro/mcp.json) into
 `.kiro/settings/mcp.json`. Optionally copy
-[`platforms/kiro/morph-session-start.kiro.hook`](platforms/kiro/morph-session-start.kiro.hook)
+[`platforms/kiro/venom-session-start.kiro.hook`](platforms/kiro/venom-session-start.kiro.hook)
 into `.kiro/hooks/` to ask the agent to read shared session guidance through
-its host-managed Morph connection.
+its host-managed Venom connection.
 
 ### OpenCode
 
@@ -76,19 +76,18 @@ into your OpenCode configuration.
 ## Agent guidance
 
 The Codex and Claude Code hooks inject a small, organization-neutral reminder.
-The reminder tells the agent to use the host-authenticated Morph MCP;
-organization-specific workflows and skills stay in Morph.
+The reminder tells the agent to use the host-authenticated Venom MCP;
+organization-specific workflows stay in the brain itself, under
+`hooks/session-start.md`.
 
 Codex and Claude Code receive the reminder at session start, resume, fork,
 context compaction, and subagent start. The guidance itself covers final
-handoff without forcing another model turn on every response. At task start,
-the agent reads `brain/hooks/session-start.md` when it exists, searches for
-shared task context, and loads relevant organization skills from Morph.
+handoff without forcing another model turn on every response.
 
-The hooks never authenticate, store tokens, or call Morph directly. If Morph is
+The hooks never authenticate, store tokens, or call Venom directly. If Venom is
 unavailable or no organization guidance exists, the agent continues silently.
 Lifecycle reminders require Node.js; when Node is unavailable, the hooks skip
-silently and the Morph MCP remains usable.
+silently and the Venom MCP remains usable.
 
 ## Development
 
@@ -97,4 +96,6 @@ npm test
 ```
 
 The test suite validates the plugin manifests, marketplace entry, and MCP
-configuration without making network requests.
+configuration without making network requests. It also checks that the bundled
+guidance and the Kiro auto-approve list name only tools the server actually
+exposes.

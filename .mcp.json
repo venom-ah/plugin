@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "morph": {
+    "venom": {
       "type": "http",
-      "url": "https://mcp.dev.morphhq.co"
+      "url": "https://mcp.dev.venom-ah.com"
     }
   }
 }

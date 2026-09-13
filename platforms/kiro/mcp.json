@@ -1,10 +1,18 @@
 {
   "_comment": "Reference template — copy into .kiro/settings/mcp.json or ~/.kiro/settings/mcp.json.",
   "mcpServers": {
-    "morph": {
-      "url": "https://mcp.dev.morphhq.co",
+    "venom": {
+      "url": "https://mcp.dev.venom-ah.com",
       "disabled": false,
-      "autoApprove": ["read", "list", "find", "grep"]
+      "autoApprove": [
+        "me",
+        "members",
+        "organization_directory",
+        "list",
+        "search",
+        "read",
+        "stat"
+      ]
     }
   }
 }

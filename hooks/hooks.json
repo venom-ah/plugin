@@ -6,10 +6,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if command -v node >/dev/null 2>&1; then node \"${CLAUDE_PLUGIN_ROOT}/hooks/morph-context.js\" SessionStart; fi",
-            "commandWindows": "if (Get-Command node -ErrorAction SilentlyContinue) { node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\morph-context.js\" SessionStart }",
+            "command": "if command -v node >/dev/null 2>&1; then node \"${CLAUDE_PLUGIN_ROOT}/hooks/venom-context.js\" SessionStart; fi",
+            "commandWindows": "if (Get-Command node -ErrorAction SilentlyContinue) { node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\venom-context.js\" SessionStart }",
             "timeout": 5,
-            "statusMessage": "Loading Morph context guidance..."
+            "statusMessage": "Loading Venom context guidance..."
           }
         ]
       }
@@ -19,10 +19,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if command -v node >/dev/null 2>&1; then node \"${CLAUDE_PLUGIN_ROOT}/hooks/morph-context.js\" SubagentStart; fi",
-            "commandWindows": "if (Get-Command node -ErrorAction SilentlyContinue) { node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\morph-context.js\" SubagentStart }",
+            "command": "if command -v node >/dev/null 2>&1; then node \"${CLAUDE_PLUGIN_ROOT}/hooks/venom-context.js\" SubagentStart; fi",
+            "commandWindows": "if (Get-Command node -ErrorAction SilentlyContinue) { node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\venom-context.js\" SubagentStart }",
             "timeout": 5,
-            "statusMessage": "Loading Morph context guidance..."
+            "statusMessage": "Loading Venom context guidance..."
           }
         ]
       }

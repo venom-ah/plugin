@@ -1,11 +1,11 @@
 {
-  "name": "morph",
+  "name": "venom",
   "interface": {
-    "displayName": "Morph"
+    "displayName": "Venom"
   },
   "plugins": [
     {
-      "name": "morph",
+      "name": "venom",
       "source": {
         "source": "local",
         "path": "./"

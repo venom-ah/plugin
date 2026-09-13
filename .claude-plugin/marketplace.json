@@ -1,15 +1,15 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "morph",
-  "description": "Morph — the collaborative enterprise brain, wired into your agent.",
+  "name": "venom",
+  "description": "Venom — the shared brain for software teams and their agents.",
   "owner": {
-    "name": "Morph",
-    "url": "https://github.com/morphhq-co"
+    "name": "Venom",
+    "url": "https://github.com/venom-ah"
   },
   "plugins": [
     {
-      "name": "morph",
-      "description": "Morph's organization brain, skills, directory, and governed Catalogue through MCP.",
+      "name": "venom",
+      "description": "Venom's organization brain and directory through MCP.",
       "source": "./",
       "category": "knowledge"
     }

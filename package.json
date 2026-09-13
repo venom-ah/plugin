@@ -1,9 +1,9 @@
 {
-  "name": "@morphhq/plugin",
-  "version": "0.1.1",
+  "name": "@venom-ah/plugin",
+  "version": "0.2.0",
   "private": true,
-  "description": "Morph agent plugin: organization brain, skills, directory, and governed Catalogue through MCP.",
-  "repository": "github:morphhq-co/plugin",
+  "description": "Venom agent plugin: organization brain and directory through MCP.",
+  "repository": "github:venom-ah/plugin",
   "engines": {
     "node": ">=18"
   },
