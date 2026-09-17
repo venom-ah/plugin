@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "venom": {
+      "type": "http",
+      "url": "https://mcp.dev.venom-ah.com",
+      "tools": [
+        "*"
+      ]
+    }
+  }
+}

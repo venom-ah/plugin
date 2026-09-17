@@ -1,13 +1,15 @@
 {
   "name": "@venom-ah/plugin",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
-  "description": "Venom agent plugin: organization brain and directory through MCP.",
+  "description": "Shared organization context through Venom MCP and its session-start skill.",
   "repository": "github:venom-ah/plugin",
   "engines": {
     "node": ">=18"
   },
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "package:gemini": "node scripts/package-gemini.js",
+    "sync:guidance": "node scripts/sync-guidance.js"
   }
 }

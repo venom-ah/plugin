@@ -1,10 +1,12 @@
 {
-  "_comment": "Reference template — merge into your opencode.json.",
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
     "venom": {
       "type": "remote",
       "url": "https://mcp.dev.venom-ah.com"
     }
-  }
+  },
+  "instructions": [
+    "VENOM.md"
+  ]
 }
