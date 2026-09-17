@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # Venom
 
 Venom is shared context for people and agents in your organization, available

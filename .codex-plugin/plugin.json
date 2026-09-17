@@ -1,7 +1,7 @@
 {
   "name": "venom",
-  "version": "0.2.0",
-  "description": "Connects agents to Venom's organization brain and directory through MCP.",
+  "version": "0.3.0",
+  "description": "Shared organization context through Venom MCP and its session-start skill.",
   "author": {
     "name": "Venom",
     "url": "https://github.com/venom-ah"
@@ -21,11 +21,10 @@
       "url": "https://mcp.dev.venom-ah.com"
     }
   },
-  "hooks": "./hooks/hooks.json",
   "interface": {
     "displayName": "Venom",
     "shortDescription": "Your organization's shared brain",
-    "longDescription": "Connects Codex to Venom's organization-scoped brain files and to the people and Teams directory, so work stays grounded in shared context.",
+    "longDescription": "Connects Codex to shared organization context. Load the organization\u2019s published session-start skill from Venom for its workflow.",
     "developerName": "Venom",
     "category": "Knowledge",
     "capabilities": [
@@ -35,9 +34,7 @@
     ],
     "websiteURL": "https://venom-ah.com",
     "defaultPrompt": [
-      "Start this task with Venom context and keep its handoff current.",
-      "Search the brain for what we already know about this.",
-      "Write up what you decided so the next agent can resume."
+      "Load my organization\u2019s Venom session-start skill and follow it for this task."
     ]
   }
 }

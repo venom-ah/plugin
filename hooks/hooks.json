@@ -2,12 +2,11 @@
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "startup|resume|clear|compact|fork",
         "hooks": [
           {
             "type": "command",
-            "command": "if command -v node >/dev/null 2>&1; then node \"${CLAUDE_PLUGIN_ROOT}/hooks/venom-context.js\" SessionStart; fi",
-            "commandWindows": "if (Get-Command node -ErrorAction SilentlyContinue) { node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\venom-context.js\" SessionStart }",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/venom-context.js\" SessionStart",
+            "commandWindows": "node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\venom-context.js\" SessionStart",
             "timeout": 5,
             "statusMessage": "Loading Venom context guidance..."
           }
@@ -19,10 +18,22 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if command -v node >/dev/null 2>&1; then node \"${CLAUDE_PLUGIN_ROOT}/hooks/venom-context.js\" SubagentStart; fi",
-            "commandWindows": "if (Get-Command node -ErrorAction SilentlyContinue) { node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\venom-context.js\" SubagentStart }",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/venom-context.js\" SubagentStart",
+            "commandWindows": "node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\venom-context.js\" SubagentStart",
             "timeout": 5,
             "statusMessage": "Loading Venom context guidance..."
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/venom-context.js\" UserPromptSubmit",
+            "commandWindows": "node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\venom-context.js\" UserPromptSubmit",
+            "timeout": 5
           }
         ]
       }

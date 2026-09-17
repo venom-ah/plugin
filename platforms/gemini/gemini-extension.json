@@ -1,0 +1,11 @@
+{
+  "name": "venom",
+  "version": "0.3.0",
+  "description": "Shared organization context through Venom MCP and its session-start skill.",
+  "mcpServers": {
+    "venom": {
+      "httpUrl": "https://mcp.dev.venom-ah.com"
+    }
+  },
+  "contextFileName": "VENOM.md"
+}

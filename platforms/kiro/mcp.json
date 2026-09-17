@@ -1,18 +1,9 @@
 {
-  "_comment": "Reference template — copy into .kiro/settings/mcp.json or ~/.kiro/settings/mcp.json.",
+  "_comment": "Reference template \u2014 copy into .kiro/settings/mcp.json or ~/.kiro/settings/mcp.json.",
   "mcpServers": {
     "venom": {
       "url": "https://mcp.dev.venom-ah.com",
-      "disabled": false,
-      "autoApprove": [
-        "me",
-        "members",
-        "organization_directory",
-        "list",
-        "search",
-        "read",
-        "stat"
-      ]
+      "disabled": false
     }
   }
 }

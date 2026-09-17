@@ -1,7 +1,7 @@
 {
   "name": "venom",
-  "version": "0.2.0",
-  "description": "Connects agents to Venom's organization brain and directory through MCP.",
+  "version": "0.3.0",
+  "description": "Shared organization context through Venom MCP and its session-start skill.",
   "author": {
     "name": "Venom",
     "url": "https://github.com/venom-ah"

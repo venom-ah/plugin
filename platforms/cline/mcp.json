@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "venom": {
+      "type": "streamableHttp",
+      "url": "https://mcp.dev.venom-ah.com",
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
