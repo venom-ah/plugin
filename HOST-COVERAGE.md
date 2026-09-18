@@ -61,7 +61,7 @@ personality modes or statusline features.
 
 | Concern | Ponytail 4.10.0 | Venom after recheck |
 | --- | --- | --- |
-| Startup selection | `startup\|resume\|clear\|compact` | Exact same matcher; previously omitted, which matched all starts rather than dropping these events |
+| Startup selection | `startup\|resume\|clear\|compact` | No matcher: covers all startup sources, including Claude's `fork` event |
 | Registration | Both manifests explicitly select the shared hook file | Same explicit shared-file registration; no duplicate default file |
 | Commands | Plain `node`, quoted plugin root, five-second timeout | Same; removed `commandWindows` from the shared schema, matching Ponytail's #593 regression |
 | Model-visible output | Codex/subagents use `hookSpecificOutput.additionalContext`; Claude startup may use text | Valid structured context for both; Gemini retains its separate output shape |
@@ -71,7 +71,7 @@ personality modes or statusline features.
 | Closed output | Attempts best-effort output | Handles asynchronous `EPIPE` without turning shutdown into a hook failure |
 | Completion | No Stop/SubagentStop or Gemini AfterAgent hook in the inspected reference | Guarded final save pass, plus focused task-status checkpoints |
 | Other hosts | Separate schemas or persistent rules; some optional native adapters | Existing persistent rule adapters and isolated Gemini package; no claim of native Cursor/Copilot/Qoder hook parity |
-| Drift checks | Rule copies, versions, hook commands and regression checks | Manifest versions, rule copies, exact matcher, schema fields, command execution, and Gemini artifact checked in tests |
+| Drift checks | Rule copies, versions, hook commands and regression checks | Manifest versions, rule copies, unrestricted startup matching, schema fields, command execution, and Gemini artifact checked in tests |
 
 Mode flags, statusline notices, and command parsing are Ponytail-specific and do
 not provide Venom write verification. They are intentionally not copied. The

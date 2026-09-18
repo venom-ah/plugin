@@ -104,7 +104,7 @@ test('OpenCode template uses only supported top-level schema fields', () => {
 test('startup and subagent hooks provide loader; prompt reminders remain short', () => {
   const hookMap = json(HOOKS_PATH).hooks;
   assert.deepEqual(Object.keys(hookMap).sort(), ['PostToolUse', 'SessionStart', 'Stop', 'SubagentStart', 'SubagentStop', 'UserPromptSubmit']);
-  assert.equal(hookMap.SessionStart[0].matcher, 'startup|resume|clear|compact');
+  assert.equal(hookMap.SessionStart[0].matcher, undefined); // All startup sources, including fork.
   for (const [event, entries] of Object.entries(hookMap)) {
     for (const hook of entries.flatMap((entry) => entry.hooks)) {
       // Claude substitutes this path before sh or PowerShell executes it;
