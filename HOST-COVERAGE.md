@@ -38,11 +38,11 @@ Current Kiro hooks have a different schema and surface-specific triggers.
 [Tool-name requirements](https://kiro.dev/docs/mcp/#tool-validation-errors),
 [current hook schema](https://kiro.dev/docs/hooks/).
 
-Gemini and Claude both auto-load `hooks/hooks.json`, but their supported events,
-path variables, and timeout units differ. Sharing that physical package
-silently breaks one host. The Gemini packaging script copies the one loader
-and its script into an isolated directory and writes only Gemini hook entries.
-It adds no runtime dependency or authentication client.
+Claude and Codex explicitly register `hooks/claude-codex-hooks.json` in their
+manifests, following Ponytail. There is no root `hooks/hooks.json`, avoiding
+duplicate auto-discovery. Gemini's separate package generates that default file
+with its own events, path variable, and millisecond timeouts. All three use the
+same reminder script. No runtime dependency or authentication client is added.
 
 ## Lifecycle findings and changes
 
@@ -50,6 +50,32 @@ The installed Ponytail 4.10.0 reference uses `SessionStart`, `SubagentStart`,
 and `UserPromptSubmit` in `hooks/claude-codex-hooks.json`. Venom already matched
 those events. Ponytail is a useful instruction-persistence reference, but that
 event set alone does not deliver a completion-time save reminder.
+
+### Ponytail comparison
+
+Reviewed the installed Ponytail 4.10.0 manifests; `claude-codex-hooks.json`;
+activation, subagent, mode-tracker, runtime, instruction-builder, and configuration
+scripts; Windows/hook regressions; Cursor/Copilot/Qoder adapters; and Gemini
+manifest. This comparison concerns reminder delivery, not Ponytail's unrelated
+personality modes or statusline features.
+
+| Concern | Ponytail 4.10.0 | Venom after recheck |
+| --- | --- | --- |
+| Startup selection | `startup\|resume\|clear\|compact` | Exact same matcher; previously omitted, which matched all starts rather than dropping these events |
+| Registration | Both manifests explicitly select the shared hook file | Same explicit shared-file registration; no duplicate default file |
+| Commands | Plain `node`, quoted plugin root, five-second timeout | Same; removed `commandWindows` from the shared schema, matching Ponytail's #593 regression |
+| Model-visible output | Codex/subagents use `hookSpecificOutput.additionalContext`; Claude startup may use text | Valid structured context for both; Gemini retains its separate output shape |
+| Startup/subagent persistence | Injects the active instructions; subagent startup normally does not read stdin | Injects the loader plus save rules, without waiting for stdin; falls back to the bundled short reminder if `VENOM.md` is missing or empty |
+| Prompt behavior | Tracks mode commands; normally silent on ordinary Claude/Codex prompts | Explicit read/save reminder on every prompt; organization workflows remain in the server skill |
+| Input robustness | Strips BOM; idempotent finish; processes received input after a one-second timeout | Same for completion hooks, plus input-size limit and an explicit false retry guard; malformed/incomplete input cannot trigger continuation |
+| Closed output | Attempts best-effort output | Handles asynchronous `EPIPE` without turning shutdown into a hook failure |
+| Completion | No Stop/SubagentStop or Gemini AfterAgent hook in the inspected reference | Guarded final save pass, plus focused task-status checkpoints |
+| Other hosts | Separate schemas or persistent rules; some optional native adapters | Existing persistent rule adapters and isolated Gemini package; no claim of native Cursor/Copilot/Qoder hook parity |
+| Drift checks | Rule copies, versions, hook commands and regression checks | Manifest versions, rule copies, exact matcher, schema fields, command execution, and Gemini artifact checked in tests |
+
+Mode flags, statusline notices, and command parsing are Ponytail-specific and do
+not provide Venom write verification. They are intentionally not copied. The
+comparison does not imply automatic persistence or universal host equivalence.
 
 Venom now reminds the agent to read saved status on startup, checkpoint useful
 changes at milestones and task-status changes, and verify saves before completion
@@ -68,7 +94,8 @@ workflow without an unbounded task-completion gate.
 `Stop` and `SubagentStop` return `decision: block` with a save/verify reminder
 only when the host supplies `stop_hook_active: false`. Gemini `AfterAgent` uses
 `decision: deny` for its equivalent retry. Already-active, missing, malformed,
-or oversized inputs allow completion; open stdin is bounded to one second.
+or oversized inputs allow completion; open stdin is bounded to one second,
+recovering a complete BOM-tolerant payload without requiring EOF.
 There is no transcript scraping or persistent local completion flag. This adds
 one follow-up model pass even if everything was already saved; the reminder
 explicitly skips unchanged information. A continuation already triggered by
@@ -94,25 +121,32 @@ proof that the latest status was saved. A stronger guarantee would require
 backend write receipts and host-specific enforcement, plus a recovery path for
 interrupted work. No such guarantee is claimed by this plugin.
 
-Claude substitutes the plugin-root placeholder before running the simple
-`node` command, including in PowerShell when Git Bash is absent. Codex uses
-its `commandWindows` override on Windows. Neither command requires POSIX
-conditionals. Missing Node produces a nonblocking hook error; server startup
+Claude and Codex resolve the plugin-root placeholder for the plain `node`
+command. The shared file contains no host-specific `commandWindows` field or
+POSIX conditionals, matching Ponytail's portable hook commands. Missing Node
+produces a nonblocking hook error; server startup
 instructions remain available when the host delivers them.
 [Claude command execution](https://code.claude.com/docs/en/hooks#exec-form-and-shell-form).
 
 ## Verification and release gate
 
 Local checks exercise emitted JSON, prompt vs startup output, completion/retry
-guards, malformed/oversized/open input, task-tool matching, unknown-event silence,
-POSIX shell quoting (including spaces in installation paths), missing Node errors,
-Gemini package isolation, and canonical rule synchronization.
+guards, BOM/malformed/oversized/open input, task-tool matching, unknown-event
+silence, missing instruction-file fallback, closed output pipes, POSIX shell
+quoting (including spaces in installation paths), missing Node errors, Gemini
+package isolation, and canonical rule synchronization.
 Configuration checks cover each adapter's transport and instruction entry.
 The OpenCode top-level field check follows its strict
 [official schema](https://opencode.ai/config.json), verified on 17 September 2026,
 and runs offline; `_comment` is not an allowed configuration field.
-These checks do not launch authenticated instances of these hosts. Windows
-commands are inspected but have not been executed in PowerShell here.
+Codex 0.154.0's read-only `plugin/read` API also discovers all six hook entries
+from the source plugin. Claude's installed CLI validates the plugin manifest.
+All 12 applicable tests pass on Node 18 and Node 26. The new regression cases
+also fail against the previous hook script, demonstrating that they detect the
+fixed behavior. These checks do not launch authenticated agent turns. The Windows PowerShell
+execution test is skipped on macOS and runs in the Windows CI job; it has not
+been executed on Windows in this local review. CI is configured for Node 18/22
+on Linux and Node 22 on Windows.
 
 Before claiming verified support for a host release, run a disposable
 organization trial: connect and authorize; start a substantive task; observe

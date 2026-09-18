@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 
-// Gemini and Claude both auto-discover hooks/hooks.json with different schemas.
-// Package Gemini separately; never install the repository root as its extension.
+// Gemini auto-discovers hooks/hooks.json with its own schema.
+// Package separately from the explicitly registered Claude/Codex hooks.
 const fs = require('node:fs');
 const path = require('node:path');
 const root = path.join(__dirname, '..');

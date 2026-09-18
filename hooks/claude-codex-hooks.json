@@ -2,11 +2,11 @@
   "hooks": {
     "SessionStart": [
       {
+        "matcher": "startup|resume|clear|compact",
         "hooks": [
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/venom-context.js\" SessionStart",
-            "commandWindows": "node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\venom-context.js\" SessionStart",
             "timeout": 5,
             "statusMessage": "Loading Venom context guidance..."
           }
@@ -19,7 +19,6 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/venom-context.js\" SubagentStart",
-            "commandWindows": "node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\venom-context.js\" SubagentStart",
             "timeout": 5,
             "statusMessage": "Loading Venom context guidance..."
           }
@@ -32,7 +31,6 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/venom-context.js\" UserPromptSubmit",
-            "commandWindows": "node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\venom-context.js\" UserPromptSubmit",
             "timeout": 5
           }
         ]
@@ -44,7 +42,6 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/venom-context.js\" PostToolUse",
-            "commandWindows": "node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\venom-context.js\" PostToolUse",
             "timeout": 5
           }
         ],
@@ -57,7 +54,6 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/venom-context.js\" Stop",
-            "commandWindows": "node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\venom-context.js\" Stop",
             "timeout": 5
           }
         ]
@@ -69,7 +65,6 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/venom-context.js\" SubagentStop",
-            "commandWindows": "node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\venom-context.js\" SubagentStop",
             "timeout": 5
           }
         ]
