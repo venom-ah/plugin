@@ -8,6 +8,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const ROOT = path.join(__dirname, '..');
+const HOOKS_PATH = 'hooks/claude-codex-hooks.json';
 const MCP_URL = 'https://mcp.dev.venom-ah.com';
 const read = (file) => fs.readFileSync(path.join(ROOT, file), 'utf8');
 const json = (file) => JSON.parse(read(file));
@@ -29,9 +30,11 @@ test('distribution manifests and marketplace retain host-managed MCP', () => {
     assert.equal(manifest.version, version);
   }
   assert.deepEqual(codex.mcpServers, { venom: { type: 'http', url: MCP_URL } });
-  assert.equal(codex.hooks, undefined); // Codex also discovers hooks/hooks.json.
+  assert.equal(codex.hooks, `./${HOOKS_PATH}`);
+  assert.ok(fs.existsSync(path.join(ROOT, codex.hooks)));
   assert.equal(claude.mcpServers, './.mcp.json');
-  assert.equal(claude.hooks, undefined); // Claude auto-loads; duplicate declaration fails.
+  assert.equal(claude.hooks, `./${HOOKS_PATH}`);
+  assert.equal(fs.existsSync(path.join(ROOT, 'hooks/hooks.json')), false); // No duplicate auto-discovery.
   assert.equal(json('.mcp.json').mcpServers.venom.url, MCP_URL);
   assert.equal(gemini.mcpServers.venom.httpUrl, MCP_URL);
   assert.equal(gemini.contextFileName, 'VENOM.md');
@@ -99,15 +102,18 @@ test('OpenCode template uses only supported top-level schema fields', () => {
 });
 
 test('startup and subagent hooks provide loader; prompt reminders remain short', () => {
-  const hookMap = json('hooks/hooks.json').hooks;
+  const hookMap = json(HOOKS_PATH).hooks;
   assert.deepEqual(Object.keys(hookMap).sort(), ['PostToolUse', 'SessionStart', 'Stop', 'SubagentStart', 'SubagentStop', 'UserPromptSubmit']);
-  assert.equal(hookMap.SessionStart[0].matcher, undefined); // all supported start sources
+  assert.equal(hookMap.SessionStart[0].matcher, undefined); // All startup sources, including fork.
   for (const [event, entries] of Object.entries(hookMap)) {
     for (const hook of entries.flatMap((entry) => entry.hooks)) {
       // Claude substitutes this path before sh or PowerShell executes it;
       // Codex also exposes it as an environment variable.
       assert.equal(hook.command, `node "\${CLAUDE_PLUGIN_ROOT}/hooks/venom-context.js" ${event}`);
-      assert.equal(hook.commandWindows, `node "$env:CLAUDE_PLUGIN_ROOT\\hooks\\venom-context.js" ${event}`);
+      assert.equal(hook.commandWindows, undefined); // Ponytail #593: not a Claude marketplace field.
+      assert.deepEqual(Object.keys(hook).sort(),
+        ['command', ...(hook.statusMessage ? ['statusMessage'] : []), 'timeout', 'type'].sort());
+      assert.doesNotMatch(hook.command, /(^|\s)exec\s|&&|\|\||>\/dev\/null/);
     }
   }
   for (const event of ['SessionStart', 'SubagentStart']) {
@@ -139,10 +145,64 @@ test('completion hooks request one save pass and fail open on invalid input', ()
     assert.match(result.reason, /already-saved/);
     assert.match(result.reason, /denied approvals/);
     assert.match(result.reason, /Venom was not updated/);
+    assert.deepEqual(JSON.parse(run(script, args, { input: '\uFEFF{"stop_hook_active":false}' })), result);
     for (const input of ['{"stop_hook_active":true}', '{}', 'null', '[]', '{', '', '{"stop_hook_active":"false"}', 'x'.repeat(1024 * 1024 + 1)]) {
       assert.equal(run(script, args, { input }), '');
     }
   }
+});
+
+test('startup and subagents retain a loader reminder if VENOM.md is missing or empty', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'venom fallback '));
+  try {
+    fs.cpSync(path.join(ROOT, 'hooks'), path.join(root, 'hooks'), { recursive: true });
+    for (const content of [null, '']) {
+      if (content !== null) fs.writeFileSync(path.join(root, 'VENOM.md'), content);
+      for (const event of ['SessionStart', 'SubagentStart']) {
+        const result = JSON.parse(run(path.join(root, 'hooks/venom-context.js'), [event]));
+        assert.equal(result.hookSpecificOutput.hookEventName, event);
+        assert.match(result.hookSpecificOutput.additionalContext, /host-managed connection/);
+        assert.match(result.hookSpecificOutput.additionalContext, /verify saves/);
+        assert.match(result.hookSpecificOutput.additionalContext, /disabled skills/);
+      }
+    }
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('a closed output pipe does not turn a reminder into a hook failure', async () => {
+  for (const event of ['SessionStart', 'Stop']) {
+    const child = cp.spawn(process.execPath, [script, event], { stdio: ['pipe', 'pipe', 'pipe'] });
+    child.stdout.destroy();
+    child.stdin.end('{"stop_hook_active":false}');
+    let stderr = '';
+    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    await new Promise((resolve, reject) => {
+      child.on('error', reject);
+      child.on('close', (code) => code === 0 ? resolve() : reject(new Error(stderr)));
+    });
+    assert.equal(stderr, '');
+  }
+});
+
+test('Windows commands execute in PowerShell from paths with spaces', { skip: process.platform !== 'win32' }, () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'venom plugin '));
+  try {
+    fs.cpSync(path.join(ROOT, 'hooks'), path.join(root, 'hooks'), { recursive: true });
+    fs.copyFileSync(path.join(ROOT, 'VENOM.md'), path.join(root, 'VENOM.md'));
+    for (const [event, groups] of Object.entries(json(HOOKS_PATH).hooks)) {
+      for (const hook of groups.flatMap((group) => group.hooks)) {
+        const input = '{"stop_hook_active":false}';
+        const expected = JSON.parse(run(script, [event], { input }));
+        for (const command of [hook.command.replace('${CLAUDE_PLUGIN_ROOT}', root), hook.command.replace('${CLAUDE_PLUGIN_ROOT}', '${env:CLAUDE_PLUGIN_ROOT}')]) {
+          const result = cp.spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `'${input}' | ${command}`], {
+            encoding: 'utf8', cwd: os.tmpdir(), env: { ...process.env, CLAUDE_PLUGIN_ROOT: root },
+          });
+          assert.equal(result.status, 0, result.stderr || String(result.error));
+          assert.deepEqual(JSON.parse(result.stdout), expected);
+        }
+      }
+    }
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
 test('configured POSIX commands work from another cwd and installation paths with spaces', () => {
@@ -151,7 +211,7 @@ test('configured POSIX commands work from another cwd and installation paths wit
   try {
     fs.cpSync(path.join(ROOT, 'hooks'), path.join(root, 'hooks'), { recursive: true });
     fs.copyFileSync(path.join(ROOT, 'VENOM.md'), path.join(root, 'VENOM.md'));
-    for (const [event, entries] of Object.entries(json('hooks/hooks.json').hooks)) {
+    for (const [event, entries] of Object.entries(json(HOOKS_PATH).hooks)) {
       for (const hook of entries.flatMap((entry) => entry.hooks)) {
         const env = { ...process.env, CLAUDE_PLUGIN_ROOT: root };
         const input = JSON.stringify({ stop_hook_active: false });
@@ -212,21 +272,29 @@ test('Gemini package isolates its schema, path substitution, and timeout units',
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
-test('hooks never hang on open stdin or continue without a complete guard payload', async () => {
-  await Promise.all(['SessionStart', 'Stop', 'SubagentStop', 'AfterAgent'].map(async (event) => {
-    const child = cp.spawn(process.execPath, [script, event], { stdio: ['pipe', 'pipe', 'ignore'] });
+test('open stdin recovers complete input once and never continues on incomplete or active input', async () => {
+  const cases = ['SessionStart', 'SubagentStart', 'UserPromptSubmit', 'Stop', 'SubagentStop', 'AfterAgent']
+    .flatMap((event) => ['', '{"stop_hook_active":', '\uFEFF{"stop_hook_active":false}', '{"stop_hook_active":true}']
+      .map((input) => ({ event, input })));
+  await Promise.all(cases.map(async ({ event, input }) => {
+    const args = event === 'AfterAgent' ? [event, 'gemini'] : [event];
+    const child = cp.spawn(process.execPath, [script, ...args], { stdio: ['pipe', 'pipe', 'ignore'] });
     let output = '';
     child.stdout.on('data', (chunk) => { output += chunk; });
-    child.stdin.write('{"stop_hook_active":');
+    child.stdin.write(input);
     await new Promise((resolve, reject) => {
       const guard = setTimeout(() => { child.kill('SIGKILL'); reject(new Error('hook waited for stdin EOF')); }, 3000);
-      child.on('exit', (code) => {
+      child.on('close', (code) => {
         clearTimeout(guard);
         if (code !== 0) reject(new Error(`hook exited ${code}`));
         else resolve();
       });
       child.on('error', (error) => { clearTimeout(guard); reject(error); });
     });
-    if (event !== 'SessionStart') assert.equal(output, '');
+    if (['Stop', 'SubagentStop', 'AfterAgent'].includes(event)) {
+      if (input.endsWith('false}')) {
+        assert.equal(JSON.parse(output).decision, event === 'AfterAgent' ? 'deny' : 'block');
+      } else assert.equal(output, '');
+    } else assert.ok(JSON.parse(output).hookSpecificOutput.additionalContext);
   }));
 });

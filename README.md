@@ -46,8 +46,8 @@ organization skill; unchanged information does not need another write.
 
 ## Gemini CLI
 
-Gemini and Claude automatically load the same hook filename with different
-schemas. Use the isolated Gemini package:
+Gemini uses a different hook schema from Claude/Codex. Use the isolated Gemini
+package:
 
 ```bash
 git clone https://github.com/venom-ah/plugin venom-plugin
@@ -103,7 +103,9 @@ npm run package:gemini
 ```
 
 Tests execute the hook scripts and packaged Gemini hook commands, verify native
-and fallback routing instructions, completion loop guards, bounded input handling,
-host controls, and catch stale
-adapters. They make no network requests and do not prove model compliance or
+and fallback routing instructions, completion loop guards, BOM/open-pipe input,
+missing instruction files, closed output pipes, and host controls. They catch
+stale adapters. CI is configured for Node 18/22 on Linux and PowerShell commands
+on Windows.
+They make no network requests and do not prove model compliance or
 live OAuth interoperability. No local copy of the backend skill is installed.
