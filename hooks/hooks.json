@@ -37,6 +37,43 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/venom-context.js\" PostToolUse",
+            "commandWindows": "node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\venom-context.js\" PostToolUse",
+            "timeout": 5
+          }
+        ],
+        "matcher": "^(TaskUpdate|TodoWrite|update_plan|update_goal)$"
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/venom-context.js\" Stop",
+            "commandWindows": "node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\venom-context.js\" Stop",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/venom-context.js\" SubagentStop",
+            "commandWindows": "node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\venom-context.js\" SubagentStop",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   }
 }

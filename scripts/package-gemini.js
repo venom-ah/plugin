@@ -14,7 +14,7 @@ for (const [source, target] of [
   ['hooks/venom-context.js', 'hooks/venom-context.js'],
 ]) fs.copyFileSync(path.join(root, source), path.join(destination, target));
 const hooks = {};
-for (const event of ['SessionStart', 'BeforeAgent']) {
+for (const event of ['SessionStart', 'BeforeAgent', 'AfterAgent']) {
   hooks[event] = [{ hooks: [{
     type: 'command',
     name: `venom-${event}`,
