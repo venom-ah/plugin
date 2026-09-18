@@ -5,7 +5,7 @@ connection at `https://mcp.dev.venom-ah.com`. The plugin asks the agent to load
 Venom's published **`session-start`** skill. The backend supplies the default;
 each organization can customize and publish its own version.
 
-The plugin contains only the loader, connection settings, and host adapters.
+The plugin contains the loader, save reminders, connection settings, and host adapters.
 Company workflows live in the backend skill. Connections remain authenticated
 and organization-scoped; the host manages OAuth, tool approval, and skill
 controls. Installing this plugin does not disable those controls.
@@ -26,11 +26,23 @@ codex plugin add venom@venom
 
 Start a new task, authorize Venom, and review/trust the bundled hooks. Codex
 also needs lifecycle hooks enabled in its configuration. These hosts get a
-loader reminder at session start/resume/context restoration, subagent start,
-and prompt submission. Node.js 18+ runs the hook; no network requests or tokens
+loader and save reminders at session start/resume/context restoration, subagent
+start, and prompt submission. Task-status tool updates trigger a save checkpoint.
+`Stop` and `SubagentStop` request one final save/verification pass before the
+agent finishes; `stop_hook_active` prevents repeated continuation. This can add
+one model pass per turn, including turns where nothing needs saving.
+Node.js 18+ runs the hook; no network requests or tokens
 are handled by the script. If Node is unavailable, the host reports a
 nonblocking hook error. If hooks cannot run, the MCP server's startup
 instructions remain the baseline. Their delivery still depends on the host.
+
+Save useful progress throughout work and before handoff or planned shutdown.
+`SessionEnd` cannot prompt the departing agent to call Venom, so no ineffective
+shutdown reminder is installed. These are reminders, not an automatic sync or
+a guarantee: forced exits, interruptions, disabled hooks, unavailable Venom, and
+model omissions can leave unsaved work. The agent must report failed/denied saves
+and include unsaved status in its handoff. Storage conventions remain in the
+organization skill; unchanged information does not need another write.
 
 ## Gemini CLI
 
@@ -45,8 +57,9 @@ gemini extensions install ./dist/gemini/venom
 ```
 
 Restart Gemini and authorize Venom. The extension loads `VENOM.md` and uses
-`SessionStart` / `BeforeAgent` hooks, with Gemini's own timeout units and path
-substitution. Node.js 18+ is needed for the hooks. To update, pull this repository,
+`SessionStart` / `BeforeAgent` reminders and a guarded `AfterAgent` save pass,
+with Gemini's own timeout units and path substitution. Node.js 18+ is needed for
+the hooks. To update, pull this repository,
 rebuild the package, and run `gemini extensions update venom` (or reinstall the
 local package). Do not install the repository root as a Gemini extension.
 
@@ -90,6 +103,7 @@ npm run package:gemini
 ```
 
 Tests execute the hook scripts and packaged Gemini hook commands, verify native
-and fallback routing instructions, preserve host controls, and catch stale
+and fallback routing instructions, completion loop guards, bounded input handling,
+host controls, and catch stale
 adapters. They make no network requests and do not prove model compliance or
 live OAuth interoperability. No local copy of the backend skill is installed.

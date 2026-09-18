@@ -40,7 +40,7 @@ test('distribution manifests and marketplace retain host-managed MCP', () => {
   assert.equal(entry.policy.authentication, 'ON_INSTALL');
 });
 
-test('loader delegates all workflow to the organization skill and respects host controls', () => {
+test('loader delegates storage conventions and requires verified lifecycle checkpoints', () => {
   assert.match(canonical, /`session-start`/);
   assert.match(canonical, /native skills when this connection/);
   assert.match(canonical, /supplied by the Venom server/);
@@ -48,6 +48,10 @@ test('loader delegates all workflow to the organization skill and respects host 
   assert.match(canonical, /Do not use\nanother loading route to bypass/);
   assert.match(canonical, /organization change/);
   assert.match(canonical, /indicated skill\nupdate/);
+  assert.match(canonical, /shared source of truth for project status/);
+  assert.match(canonical, /meaningful milestones/);
+  assert.match(canonical, /verify saves/);
+  assert.match(canonical, /Venom was not updated/);
   assert.doesNotMatch(canonical, /`me`|hooks\/session-start|brains\/|projects\/|knowledge\/|tasks\//);
   assert.equal(fs.existsSync(path.join(ROOT, 'skills')), false);
   assert.equal(fs.existsSync(path.join(ROOT, 'gemini-extension.json')), false);
@@ -96,7 +100,7 @@ test('OpenCode template uses only supported top-level schema fields', () => {
 
 test('startup and subagent hooks provide loader; prompt reminders remain short', () => {
   const hookMap = json('hooks/hooks.json').hooks;
-  assert.deepEqual(Object.keys(hookMap).sort(), ['SessionStart', 'SubagentStart', 'UserPromptSubmit']);
+  assert.deepEqual(Object.keys(hookMap).sort(), ['PostToolUse', 'SessionStart', 'Stop', 'SubagentStart', 'SubagentStop', 'UserPromptSubmit']);
   assert.equal(hookMap.SessionStart[0].matcher, undefined); // all supported start sources
   for (const [event, entries] of Object.entries(hookMap)) {
     for (const hook of entries.flatMap((entry) => entry.hooks)) {
@@ -114,9 +118,31 @@ test('startup and subagent hooks provide loader; prompt reminders remain short',
   const turn = JSON.parse(run(script, ['UserPromptSubmit']));
   assert.equal(turn.hookSpecificOutput.hookEventName, 'UserPromptSubmit');
   assert.match(turn.hookSpecificOutput.additionalContext, /session-start/);
+  assert.match(turn.hookSpecificOutput.additionalContext, /Save useful progress/);
   assert.ok(turn.hookSpecificOutput.additionalContext.length < 400);
-  for (const event of ['Stop', 'PostToolUse', 'Unknown']) assert.equal(run(script, [event]), '');
+  const matcher = new RegExp(hookMap.PostToolUse[0].matcher);
+  for (const name of ['TaskUpdate', 'TodoWrite', 'update_plan', 'update_goal']) assert.ok(matcher.test(name));
+  for (const name of ['Bash', 'Read', 'mcp__venom__write', 'mcp__venom__edit']) assert.ok(!matcher.test(name));
+  const checkpoint = JSON.parse(run(script, ['PostToolUse']));
+  assert.equal(checkpoint.hookSpecificOutput.hookEventName, 'PostToolUse');
+  assert.match(checkpoint.hookSpecificOutput.additionalContext, /verify the save/);
+  for (const event of ['SessionEnd', 'PreCompact', 'Unknown']) assert.equal(run(script, [event]), '');
   assert.doesNotMatch(read('hooks/venom-context.js'), /\bfetch\s*\(|https?:\/\/|readFileSync\s*\(\s*0/);
+});
+
+test('completion hooks request one save pass and fail open on invalid input', () => {
+  for (const event of ['Stop', 'SubagentStop', 'AfterAgent']) {
+    const args = event === 'AfterAgent' ? [event, 'gemini'] : [event];
+    const result = JSON.parse(run(script, args, { input: JSON.stringify({ stop_hook_active: false }) }));
+    assert.equal(result.decision, event === 'AfterAgent' ? 'deny' : 'block');
+    assert.match(result.reason, /verify the save/);
+    assert.match(result.reason, /already-saved/);
+    assert.match(result.reason, /denied approvals/);
+    assert.match(result.reason, /Venom was not updated/);
+    for (const input of ['{"stop_hook_active":true}', '{}', 'null', '[]', '{', '', '{"stop_hook_active":"false"}', 'x'.repeat(1024 * 1024 + 1)]) {
+      assert.equal(run(script, args, { input }), '');
+    }
+  }
 });
 
 test('configured POSIX commands work from another cwd and installation paths with spaces', () => {
@@ -128,14 +154,16 @@ test('configured POSIX commands work from another cwd and installation paths wit
     for (const [event, entries] of Object.entries(json('hooks/hooks.json').hooks)) {
       for (const hook of entries.flatMap((entry) => entry.hooks)) {
         const env = { ...process.env, CLAUDE_PLUGIN_ROOT: root };
-        const result = cp.spawnSync('/bin/sh', ['-c', hook.command], { encoding: 'utf8', cwd: os.tmpdir(), env });
+        const input = JSON.stringify({ stop_hook_active: false });
+        const expected = JSON.parse(run(script, [event], { input }));
+        const result = cp.spawnSync('/bin/sh', ['-c', hook.command], { encoding: 'utf8', cwd: os.tmpdir(), env, input });
         assert.equal(result.status, 0, result.stderr);
-        assert.equal(JSON.parse(result.stdout).hookSpecificOutput.hookEventName, event);
+        assert.deepEqual(JSON.parse(result.stdout), expected);
         const substituted = cp.spawnSync('/bin/sh', ['-c', hook.command.replace('${CLAUDE_PLUGIN_ROOT}', root)], {
-          encoding: 'utf8', cwd: os.tmpdir(),
+          encoding: 'utf8', cwd: os.tmpdir(), input,
         });
         assert.equal(substituted.status, 0, substituted.stderr);
-        assert.equal(JSON.parse(substituted.stdout).hookSpecificOutput.hookEventName, event);
+        assert.deepEqual(JSON.parse(substituted.stdout), expected);
         const missingNode = cp.spawnSync('/bin/sh', ['-c', hook.command], {
           encoding: 'utf8', env: { CLAUDE_PLUGIN_ROOT: root, PATH: '/node-is-not-installed' },
         });
@@ -154,18 +182,27 @@ test('Gemini package isolates its schema, path substitution, and timeout units',
     const manifest = JSON.parse(fs.readFileSync(path.join(root, 'gemini-extension.json'), 'utf8'));
     assert.equal(fs.readFileSync(path.join(root, manifest.contextFileName), 'utf8').trim(), canonical);
     const hooks = JSON.parse(fs.readFileSync(path.join(root, 'hooks/hooks.json'), 'utf8')).hooks;
-    assert.deepEqual(Object.keys(hooks), ['SessionStart', 'BeforeAgent']);
+    assert.deepEqual(Object.keys(hooks), ['SessionStart', 'BeforeAgent', 'AfterAgent']);
     for (const [event, entries] of Object.entries(hooks)) {
       const hook = entries[0].hooks[0];
       assert.equal(hook.timeout, 5000);
       assert.match(hook.command, /\$\{extensionPath\}/);
       assert.doesNotMatch(hook.command, /CLAUDE_PLUGIN_ROOT/);
-      const response = JSON.parse(run(path.join(root, 'hooks/venom-context.js'), [event, 'gemini']));
-      assert.equal(response.hookSpecificOutput.hookEventName, undefined);
-      assert.match(response.hookSpecificOutput.additionalContext, /session-start/);
+      const input = JSON.stringify({ stop_hook_active: false });
+      const response = JSON.parse(run(path.join(root, 'hooks/venom-context.js'), [event, 'gemini'], { input }));
+      if (event === 'AfterAgent') {
+        assert.equal(response.decision, 'deny');
+        assert.match(response.reason, /verify the save/);
+        assert.equal(run(path.join(root, 'hooks/venom-context.js'), [event, 'gemini'], {
+          input: '{"stop_hook_active":true}',
+        }), '');
+      } else {
+        assert.equal(response.hookSpecificOutput.hookEventName, undefined);
+        assert.match(response.hookSpecificOutput.additionalContext, /session-start/);
+      }
       if (process.platform !== 'win32') {
         const result = cp.spawnSync('/bin/sh', ['-c', hook.command.replace('${extensionPath}', root)], {
-          encoding: 'utf8', cwd: os.tmpdir(),
+          encoding: 'utf8', cwd: os.tmpdir(), input,
         });
         assert.equal(result.status, 0, result.stderr);
         assert.deepEqual(JSON.parse(result.stdout), response);
@@ -175,11 +212,21 @@ test('Gemini package isolates its schema, path substitution, and timeout units',
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
-test('hooks never wait for stdin EOF', async () => {
-  const child = cp.spawn(process.execPath, [script, 'SessionStart'], { stdio: ['pipe', 'ignore', 'ignore'] });
-  await new Promise((resolve, reject) => {
-    const guard = setTimeout(() => { child.kill('SIGKILL'); reject(new Error('hook waited for stdin EOF')); }, 3000);
-    child.on('exit', (code) => { clearTimeout(guard); assert.equal(code, 0); resolve(); });
-    child.on('error', reject);
-  });
+test('hooks never hang on open stdin or continue without a complete guard payload', async () => {
+  await Promise.all(['SessionStart', 'Stop', 'SubagentStop', 'AfterAgent'].map(async (event) => {
+    const child = cp.spawn(process.execPath, [script, event], { stdio: ['pipe', 'pipe', 'ignore'] });
+    let output = '';
+    child.stdout.on('data', (chunk) => { output += chunk; });
+    child.stdin.write('{"stop_hook_active":');
+    await new Promise((resolve, reject) => {
+      const guard = setTimeout(() => { child.kill('SIGKILL'); reject(new Error('hook waited for stdin EOF')); }, 3000);
+      child.on('exit', (code) => {
+        clearTimeout(guard);
+        if (code !== 0) reject(new Error(`hook exited ${code}`));
+        else resolve();
+      });
+      child.on('error', (error) => { clearTimeout(guard); reject(error); });
+    });
+    if (event !== 'SessionStart') assert.equal(output, '');
+  }));
 });
