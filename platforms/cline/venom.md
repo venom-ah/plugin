@@ -16,12 +16,14 @@ skill, not in these instructions.
 
 Keep Venom current as the shared source of truth for project status. On start
 or resume, read the relevant saved state before acting. Save useful changes at
-meaningful milestones, when a task's status changes, and before completion,
-handoff, or a planned session end; do not wait until shutdown. Follow the loaded
+meaningful milestones, when a task's status changes, and before writing the
+final answer, handing off, or a planned session end; do not wait until shutdown. Follow the loaded
 skill's storage conventions. Preserve outcomes, current status, decisions,
 evidence, blockers, and next actions. Read before editing, reconcile concurrent
 changes, and verify saves. Update existing records rather than duplicating them;
-skip writes when nothing useful changed. Never mark unfinished work complete.
+skip writes when nothing useful changed. Avoid routine save announcements or
+standalone save confirmations unless the user asks; report failed or unavailable
+saves as described below. Never mark unfinished work complete.
 Subagents save within their assigned scope, or return unsaved findings to the
 parent agent for consolidation. Keep secrets and raw transcripts out of Venom.
 

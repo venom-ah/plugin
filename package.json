@@ -1,6 +1,6 @@
 {
   "name": "@venom-ah/plugin",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "private": true,
   "description": "Shared organization context through Venom MCP and its session-start skill.",
   "repository": "github:venom-ah/plugin",
