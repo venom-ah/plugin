@@ -14,23 +14,29 @@ reload it after context loss, an organization change, or an indicated skill
 update. Organization workflows and storage conventions belong in that backend
 skill, not in these instructions.
 
-Keep Venom current as the shared source of truth for project status. On start
-or resume, read the relevant saved state before acting. Save useful changes at
-meaningful milestones, when a task's status changes, and before writing the
-final answer, handing off, or a planned session end; do not wait until shutdown. Follow the loaded
-skill's storage conventions. Preserve outcomes, current status, decisions,
-evidence, blockers, and next actions. Read before editing, reconcile concurrent
-changes, and verify saves. Update existing records rather than duplicating them;
-skip writes when nothing useful changed. Avoid routine save announcements or
-standalone save confirmations unless the user asks; report failed or unavailable
-saves as described below. Never mark unfinished work complete.
-Subagents save within their assigned scope, or return unsaved findings to the
-parent agent for consolidation. Keep secrets and raw transcripts out of Venom.
+On start or resume, read the relevant saved context before acting. Venom preserves
+human intent, constraints, decisions and rationale, and the context needed to
+resume work. Code remains authoritative for implementation; link to it rather
+than maintain a second explanation of it.
+
+Write only when a future session needs meaningful new context that is not already
+maintained elsewhere. Prefer skipping, linking, or updating an existing record
+over creating another. A read, successful test, milestone, or final answer does
+not by itself require a save. Successful sessions can make zero writes.
+Preserve a consequential new decision or recovery detail when losing it would
+change the next agent's action; do not defer necessary handoffs to shutdown.
+Follow the organization's storage conventions, read before editing, reconcile
+concurrent changes, and verify saves. Replace obsolete answers and next actions
+instead of appending contradictory updates. Never mark unfinished work complete.
+Subagents return useful findings to their parent for consolidation unless assigned
+a distinct writing scope. Keep secrets and raw transcripts out of Venom.
+Avoid routine save announcements. Report failure only when a necessary save could
+not be completed, with the unsaved context in the handoff.
 
 Respect disabled skills, denied approvals, and disabled connections. Do not use
 another loading route to bypass them. If the skill cannot be retrieved, state
 the relevant limitation and continue work that does not depend on it. Do not
 invent the missing guidance or claim to have loaded it.
-If a save is unavailable, denied, or fails, report that Venom was not updated
+If a necessary save is unavailable, denied, or fails, report that Venom was not updated
 and include the unsaved status in the handoff. Claim a successful save only
 after confirmation from Venom.

@@ -5,7 +5,7 @@ connection at `https://mcp.dev.venom-ah.com`. The plugin asks the agent to load
 Venom's published **`session-start`** skill. The backend supplies the default;
 each organization can customize and publish its own version.
 
-The plugin contains the loader, save reminders, connection settings, and host adapters.
+The plugin contains the startup guidance, connection settings, and host adapters.
 Company workflows live in the backend skill. Connections remain authenticated
 and organization-scoped; the host manages OAuth, tool approval, and skill
 controls. Installing this plugin does not disable those controls.
@@ -25,24 +25,19 @@ codex plugin add venom@venom
 ```
 
 Start a new task, authorize Venom, and review/trust the bundled hooks. Codex
-also needs lifecycle hooks enabled in its configuration. These hosts get a
-loader and save reminders at session start/resume/context restoration, subagent
-start, and prompt submission. Task-status tool updates trigger a save checkpoint.
-Save guidance applies within the normal turn, before the final answer or handoff.
-No `Stop` or `SubagentStop` hooks are registered: Venom never requests an extra
-completion turn, including when information is already saved or unchanged.
-Node.js 18+ runs the hook; no network requests or tokens
-are handled by the script. If Node is unavailable, the host reports a
-nonblocking hook error. If hooks cannot run, the MCP server's startup
-instructions remain the baseline. Their delivery still depends on the host.
+also needs lifecycle hooks enabled in its configuration. These hosts load guidance
+at session start/resume/context restoration and subagent start. There are no
+per-prompt, task-tool, or completion save reminders. Stale registrations for those
+events are also silent. Node.js 18+ runs the hook without network requests or
+credentials. If hooks cannot run, the MCP server's startup instructions remain
+the baseline; their delivery depends on the host.
 
-Save useful progress throughout work and before handoff or planned shutdown.
-`SessionEnd` cannot prompt the departing agent to call Venom, so no ineffective
-shutdown reminder is installed. These are reminders, not an automatic sync or
-a guarantee: forced exits, interruptions, disabled hooks, unavailable Venom, and
-model omissions can leave unsaved work. The agent must report failed/denied saves
-and include unsaved status in its handoff. Storage conventions remain in the
-organization skill; unchanged information does not need another write.
+Read relevant context first. Write only meaningful new human intent, decisions,
+or recovery context that a future session needs. Link to code rather than repeat
+its implementation. Ordinary reads, tests, and final answers do not require a
+write. Necessary handoffs should be saved before context is lost, not postponed
+until shutdown. Failed necessary saves must be reported honestly. These rules
+are guidance, not automatic synchronization or a guarantee against interruption.
 
 ## Gemini CLI
 
@@ -57,7 +52,7 @@ gemini extensions install ./dist/gemini/venom
 ```
 
 Restart Gemini and authorize Venom. The extension loads `VENOM.md` and uses
-`SessionStart` / `BeforeAgent` reminders, without an `AfterAgent` continuation,
+`SessionStart` guidance, without per-turn or completion reminders,
 with Gemini's own timeout units and path substitution. Node.js 18+ is needed for
 the hooks. To update, pull this repository,
 rebuild the package, and run `gemini extensions update venom` (or reinstall the
@@ -85,10 +80,10 @@ The [coverage notes](HOST-COVERAGE.md) describe sources, lifecycle limits, and
 verification. These are local/IDE adapters; unattended cloud agents need a
 separately supported authentication path.
 
-## Upgrading from 0.3.1 or 0.3.2
+## Updating hook behavior
 
-Update the marketplace and installed plugin to 0.3.3, then start a fresh task
-or restart the host so the old completion hooks are unloaded. Review/trust the
+After installing a release with these changes, start a fresh task or restart the
+host so old prompt, milestone, and completion hooks are unloaded. Review/trust the
 remaining hooks if the host requests it. Gemini users must rebuild or install
 the new extension package. Existing sessions may retain the old hooks until
 restarted. Manually copied adapters must be refreshed from this release.

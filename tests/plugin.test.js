@@ -43,7 +43,7 @@ test('distribution manifests and marketplace retain host-managed MCP', () => {
   assert.equal(entry.policy.authentication, 'ON_INSTALL');
 });
 
-test('loader delegates storage conventions and requires verified lifecycle checkpoints', () => {
+test('loader delegates storage conventions and makes writing conditional', () => {
   assert.match(canonical, /`session-start`/);
   assert.match(canonical, /native skills when this connection/);
   assert.match(canonical, /supplied by the Venom server/);
@@ -51,10 +51,10 @@ test('loader delegates storage conventions and requires verified lifecycle check
   assert.match(canonical, /Do not use\nanother loading route to bypass/);
   assert.match(canonical, /organization change/);
   assert.match(canonical, /indicated skill\nupdate/);
-  assert.match(canonical, /shared source of truth for project status/);
-  assert.match(canonical, /meaningful milestones/);
+  assert.match(canonical, /human intent, constraints, decisions and rationale/);
+  assert.match(canonical, /Successful sessions can make zero writes/);
   assert.match(canonical, /verify saves/);
-  assert.match(canonical, /before writing the\nfinal answer/);
+  assert.match(canonical, /do not defer necessary handoffs to shutdown/);
   assert.match(canonical, /Avoid routine save announcements/);
   assert.match(canonical, /Venom was not updated/);
   assert.doesNotMatch(canonical, /`me`|hooks\/session-start|brains\/|projects\/|knowledge\/|tasks\//);
@@ -103,9 +103,9 @@ test('OpenCode template uses only supported top-level schema fields', () => {
   assert.deepEqual(Object.keys(config).sort(), ['$schema', 'instructions', 'mcp']);
 });
 
-test('startup and subagent hooks provide loader; prompt reminders remain short', () => {
+test('only startup and subagent hooks provide guidance', () => {
   const hookMap = json(HOOKS_PATH).hooks;
-  assert.deepEqual(Object.keys(hookMap).sort(), ['PostToolUse', 'SessionStart', 'SubagentStart', 'UserPromptSubmit']);
+  assert.deepEqual(Object.keys(hookMap).sort(), ['SessionStart', 'SubagentStart']);
   assert.equal(hookMap.SessionStart[0].matcher, undefined); // All startup sources, including fork.
   for (const [event, entries] of Object.entries(hookMap)) {
     for (const hook of entries.flatMap((entry) => entry.hooks)) {
@@ -123,20 +123,10 @@ test('startup and subagent hooks provide loader; prompt reminders remain short',
     assert.equal(result.hookSpecificOutput.hookEventName, event);
     assert.equal(result.hookSpecificOutput.additionalContext, canonical);
   }
-  const turn = JSON.parse(run(script, ['UserPromptSubmit']));
-  assert.equal(turn.hookSpecificOutput.hookEventName, 'UserPromptSubmit');
-  assert.match(turn.hookSpecificOutput.additionalContext, /session-start/);
-  assert.match(turn.hookSpecificOutput.additionalContext, /Save useful progress/);
-  assert.match(turn.hookSpecificOutput.additionalContext, /before the final answer/);
-  assert.match(turn.hookSpecificOutput.additionalContext, /Skip unchanged information and routine save narration/);
-  assert.ok(turn.hookSpecificOutput.additionalContext.length < 400);
-  const matcher = new RegExp(hookMap.PostToolUse[0].matcher);
-  for (const name of ['TaskUpdate', 'TodoWrite', 'update_plan', 'update_goal']) assert.ok(matcher.test(name));
-  for (const name of ['Bash', 'Read', 'mcp__venom__write', 'mcp__venom__edit']) assert.ok(!matcher.test(name));
-  const checkpoint = JSON.parse(run(script, ['PostToolUse']));
-  assert.equal(checkpoint.hookSpecificOutput.hookEventName, 'PostToolUse');
-  assert.match(checkpoint.hookSpecificOutput.additionalContext, /verify the save/);
-  for (const event of ['SessionEnd', 'PreCompact', 'Unknown']) assert.equal(run(script, [event]), '');
+  for (const event of ['UserPromptSubmit', 'BeforeAgent', 'PostToolUse', 'SessionEnd', 'PreCompact', 'Unknown']) {
+    // Stale host registrations must not reintroduce per-turn write pressure.
+    assert.equal(run(script, [event]), '');
+  }
   assert.doesNotMatch(read('hooks/venom-context.js'), /\bfetch\s*\(|https?:\/\/|readFileSync\s*\(\s*0/);
 });
 
@@ -169,7 +159,7 @@ test('startup and subagents retain a loader reminder if VENOM.md is missing or e
 });
 
 test('a closed output pipe does not turn a reminder into a hook failure', async () => {
-  for (const event of ['SessionStart', 'PostToolUse']) {
+  for (const event of ['SessionStart', 'UserPromptSubmit']) {
     const child = cp.spawn(process.execPath, [script, event], { stdio: ['pipe', 'pipe', 'pipe'] });
     child.stdout.destroy();
     child.stdin.end('{"stop_hook_active":false}');
@@ -241,7 +231,7 @@ test('Gemini package isolates its schema, path substitution, and timeout units',
     const manifest = JSON.parse(fs.readFileSync(path.join(root, 'gemini-extension.json'), 'utf8'));
     assert.equal(fs.readFileSync(path.join(root, manifest.contextFileName), 'utf8').trim(), canonical);
     const hooks = JSON.parse(fs.readFileSync(path.join(root, 'hooks/hooks.json'), 'utf8')).hooks;
-    assert.deepEqual(Object.keys(hooks), ['SessionStart', 'BeforeAgent']);
+    assert.deepEqual(Object.keys(hooks), ['SessionStart']);
     for (const [event, entries] of Object.entries(hooks)) {
       const hook = entries[0].hooks[0];
       assert.equal(hook.timeout, 5000);
@@ -282,7 +272,7 @@ test('hooks do not wait for stdin and completion events stay silent', async () =
       });
       child.on('error', (error) => { clearTimeout(guard); reject(error); });
     });
-    if (['Stop', 'SubagentStop', 'AfterAgent'].includes(event)) {
+    if (!['SessionStart', 'SubagentStart'].includes(event)) {
       assert.equal(output, '');
     } else assert.ok(JSON.parse(output).hookSpecificOutput.additionalContext);
   }));
