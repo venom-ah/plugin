@@ -54,6 +54,8 @@ test('loader delegates storage conventions and requires verified lifecycle check
   assert.match(canonical, /shared source of truth for project status/);
   assert.match(canonical, /meaningful milestones/);
   assert.match(canonical, /verify saves/);
+  assert.match(canonical, /before writing the\nfinal answer/);
+  assert.match(canonical, /Avoid routine save announcements/);
   assert.match(canonical, /Venom was not updated/);
   assert.doesNotMatch(canonical, /`me`|hooks\/session-start|brains\/|projects\/|knowledge\/|tasks\//);
   assert.equal(fs.existsSync(path.join(ROOT, 'skills')), false);
@@ -103,7 +105,7 @@ test('OpenCode template uses only supported top-level schema fields', () => {
 
 test('startup and subagent hooks provide loader; prompt reminders remain short', () => {
   const hookMap = json(HOOKS_PATH).hooks;
-  assert.deepEqual(Object.keys(hookMap).sort(), ['PostToolUse', 'SessionStart', 'Stop', 'SubagentStart', 'SubagentStop', 'UserPromptSubmit']);
+  assert.deepEqual(Object.keys(hookMap).sort(), ['PostToolUse', 'SessionStart', 'SubagentStart', 'UserPromptSubmit']);
   assert.equal(hookMap.SessionStart[0].matcher, undefined); // All startup sources, including fork.
   for (const [event, entries] of Object.entries(hookMap)) {
     for (const hook of entries.flatMap((entry) => entry.hooks)) {
@@ -125,6 +127,8 @@ test('startup and subagent hooks provide loader; prompt reminders remain short',
   assert.equal(turn.hookSpecificOutput.hookEventName, 'UserPromptSubmit');
   assert.match(turn.hookSpecificOutput.additionalContext, /session-start/);
   assert.match(turn.hookSpecificOutput.additionalContext, /Save useful progress/);
+  assert.match(turn.hookSpecificOutput.additionalContext, /before the final answer/);
+  assert.match(turn.hookSpecificOutput.additionalContext, /Skip unchanged information and routine save narration/);
   assert.ok(turn.hookSpecificOutput.additionalContext.length < 400);
   const matcher = new RegExp(hookMap.PostToolUse[0].matcher);
   for (const name of ['TaskUpdate', 'TodoWrite', 'update_plan', 'update_goal']) assert.ok(matcher.test(name));
@@ -136,18 +140,13 @@ test('startup and subagent hooks provide loader; prompt reminders remain short',
   assert.doesNotMatch(read('hooks/venom-context.js'), /\bfetch\s*\(|https?:\/\/|readFileSync\s*\(\s*0/);
 });
 
-test('completion hooks request one save pass and fail open on invalid input', () => {
+test('completion never requests another model turn, including already-saved and trivial turns', () => {
   for (const event of ['Stop', 'SubagentStop', 'AfterAgent']) {
     const args = event === 'AfterAgent' ? [event, 'gemini'] : [event];
-    const result = JSON.parse(run(script, args, { input: JSON.stringify({ stop_hook_active: false }) }));
-    assert.equal(result.decision, event === 'AfterAgent' ? 'deny' : 'block');
-    assert.match(result.reason, /verify the save/);
-    assert.match(result.reason, /already-saved/);
-    assert.match(result.reason, /denied approvals/);
-    assert.match(result.reason, /Venom was not updated/);
-    assert.deepEqual(JSON.parse(run(script, args, { input: '\uFEFF{"stop_hook_active":false}' })), result);
-    for (const input of ['{"stop_hook_active":true}', '{}', 'null', '[]', '{', '', '{"stop_hook_active":"false"}', 'x'.repeat(1024 * 1024 + 1)]) {
-      assert.equal(run(script, args, { input }), '');
+    for (const last_assistant_message of ['Venom was updated and the save verified.', 'Hello!', 'Work completed; progress not saved.']) {
+      for (const stop_hook_active of [false, true]) {
+        assert.equal(run(script, args, { input: JSON.stringify({ stop_hook_active, last_assistant_message }) }), '');
+      }
     }
   }
 });
@@ -170,7 +169,7 @@ test('startup and subagents retain a loader reminder if VENOM.md is missing or e
 });
 
 test('a closed output pipe does not turn a reminder into a hook failure', async () => {
-  for (const event of ['SessionStart', 'Stop']) {
+  for (const event of ['SessionStart', 'PostToolUse']) {
     const child = cp.spawn(process.execPath, [script, event], { stdio: ['pipe', 'pipe', 'pipe'] });
     child.stdout.destroy();
     child.stdin.end('{"stop_hook_active":false}');
@@ -242,7 +241,7 @@ test('Gemini package isolates its schema, path substitution, and timeout units',
     const manifest = JSON.parse(fs.readFileSync(path.join(root, 'gemini-extension.json'), 'utf8'));
     assert.equal(fs.readFileSync(path.join(root, manifest.contextFileName), 'utf8').trim(), canonical);
     const hooks = JSON.parse(fs.readFileSync(path.join(root, 'hooks/hooks.json'), 'utf8')).hooks;
-    assert.deepEqual(Object.keys(hooks), ['SessionStart', 'BeforeAgent', 'AfterAgent']);
+    assert.deepEqual(Object.keys(hooks), ['SessionStart', 'BeforeAgent']);
     for (const [event, entries] of Object.entries(hooks)) {
       const hook = entries[0].hooks[0];
       assert.equal(hook.timeout, 5000);
@@ -250,16 +249,8 @@ test('Gemini package isolates its schema, path substitution, and timeout units',
       assert.doesNotMatch(hook.command, /CLAUDE_PLUGIN_ROOT/);
       const input = JSON.stringify({ stop_hook_active: false });
       const response = JSON.parse(run(path.join(root, 'hooks/venom-context.js'), [event, 'gemini'], { input }));
-      if (event === 'AfterAgent') {
-        assert.equal(response.decision, 'deny');
-        assert.match(response.reason, /verify the save/);
-        assert.equal(run(path.join(root, 'hooks/venom-context.js'), [event, 'gemini'], {
-          input: '{"stop_hook_active":true}',
-        }), '');
-      } else {
-        assert.equal(response.hookSpecificOutput.hookEventName, undefined);
-        assert.match(response.hookSpecificOutput.additionalContext, /session-start/);
-      }
+      assert.equal(response.hookSpecificOutput.hookEventName, undefined);
+      assert.match(response.hookSpecificOutput.additionalContext, /session-start/);
       if (process.platform !== 'win32') {
         const result = cp.spawnSync('/bin/sh', ['-c', hook.command.replace('${extensionPath}', root)], {
           encoding: 'utf8', cwd: os.tmpdir(), input,
@@ -272,7 +263,7 @@ test('Gemini package isolates its schema, path substitution, and timeout units',
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
-test('open stdin recovers complete input once and never continues on incomplete or active input', async () => {
+test('hooks do not wait for stdin and completion events stay silent', async () => {
   const cases = ['SessionStart', 'SubagentStart', 'UserPromptSubmit', 'Stop', 'SubagentStop', 'AfterAgent']
     .flatMap((event) => ['', '{"stop_hook_active":', '\uFEFF{"stop_hook_active":false}', '{"stop_hook_active":true}']
       .map((input) => ({ event, input })));
@@ -292,9 +283,7 @@ test('open stdin recovers complete input once and never continues on incomplete 
       child.on('error', (error) => { clearTimeout(guard); reject(error); });
     });
     if (['Stop', 'SubagentStop', 'AfterAgent'].includes(event)) {
-      if (input.endsWith('false}')) {
-        assert.equal(JSON.parse(output).decision, event === 'AfterAgent' ? 'deny' : 'block');
-      } else assert.equal(output, '');
+      assert.equal(output, '');
     } else assert.ok(JSON.parse(output).hookSpecificOutput.additionalContext);
   }));
 });

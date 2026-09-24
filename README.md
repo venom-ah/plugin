@@ -28,9 +28,9 @@ Start a new task, authorize Venom, and review/trust the bundled hooks. Codex
 also needs lifecycle hooks enabled in its configuration. These hosts get a
 loader and save reminders at session start/resume/context restoration, subagent
 start, and prompt submission. Task-status tool updates trigger a save checkpoint.
-`Stop` and `SubagentStop` request one final save/verification pass before the
-agent finishes; `stop_hook_active` prevents repeated continuation. This can add
-one model pass per turn, including turns where nothing needs saving.
+Save guidance applies within the normal turn, before the final answer or handoff.
+No `Stop` or `SubagentStop` hooks are registered: Venom never requests an extra
+completion turn, including when information is already saved or unchanged.
 Node.js 18+ runs the hook; no network requests or tokens
 are handled by the script. If Node is unavailable, the host reports a
 nonblocking hook error. If hooks cannot run, the MCP server's startup
@@ -57,7 +57,7 @@ gemini extensions install ./dist/gemini/venom
 ```
 
 Restart Gemini and authorize Venom. The extension loads `VENOM.md` and uses
-`SessionStart` / `BeforeAgent` reminders and a guarded `AfterAgent` save pass,
+`SessionStart` / `BeforeAgent` reminders, without an `AfterAgent` continuation,
 with Gemini's own timeout units and path substitution. Node.js 18+ is needed for
 the hooks. To update, pull this repository,
 rebuild the package, and run `gemini extensions update venom` (or reinstall the
@@ -85,6 +85,14 @@ The [coverage notes](HOST-COVERAGE.md) describe sources, lifecycle limits, and
 verification. These are local/IDE adapters; unattended cloud agents need a
 separately supported authentication path.
 
+## Upgrading from 0.3.1 or 0.3.2
+
+Update the marketplace and installed plugin to 0.3.3, then start a fresh task
+or restart the host so the old completion hooks are unloaded. Review/trust the
+remaining hooks if the host requests it. Gemini users must rebuild or install
+the new extension package. Existing sessions may retain the old hooks until
+restarted. Manually copied adapters must be refreshed from this release.
+
 ## Upgrading from 0.2
 
 Remove the old Kiro `venom-session-start.kiro.hook` if previously installed and
@@ -103,7 +111,7 @@ npm run package:gemini
 ```
 
 Tests execute the hook scripts and packaged Gemini hook commands, verify native
-and fallback routing instructions, completion loop guards, BOM/open-pipe input,
+and fallback routing instructions, silent completion events, open stdin,
 missing instruction files, closed output pipes, and host controls. They catch
 stale adapters. CI is configured for Node 18/22 on Linux and PowerShell commands
 on Windows.
