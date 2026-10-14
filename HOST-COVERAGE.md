@@ -49,8 +49,8 @@ same reminder script. No runtime dependency or authentication client is added.
 Only `SessionStart` and `SubagentStart` inject guidance. Gemini uses SessionStart
 and its persistent context file. Per-prompt and task-tool hooks are removed;
 stale prompt, tool, and completion invocations produce no output. Version 0.3.3
-already removed forced completion turns; this change removes the remaining
-repeated write reminders. Restart updated hosts to unload cached registrations.
+already removed forced completion turns; version 0.3.4 removes the remaining
+repeated write reminders and adds project/task discovery guidance. Restart updated hosts to unload cached registrations.
 
 `VENOM.md` is canonical; persistent adapters are generated from it. The guidance
 prioritizes reading, allows zero-write sessions, and saves only useful context

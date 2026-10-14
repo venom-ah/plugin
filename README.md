@@ -80,7 +80,7 @@ The [coverage notes](HOST-COVERAGE.md) describe sources, lifecycle limits, and
 verification. These are local/IDE adapters; unattended cloud agents need a
 separately supported authentication path.
 
-## Updating hook behavior
+## Updating to 0.3.4
 
 After installing a release with these changes, start a fresh task or restart the
 host so old prompt, milestone, and completion hooks are unloaded. Review/trust the

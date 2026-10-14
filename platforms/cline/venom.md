@@ -14,10 +14,13 @@ reload it after context loss, an organization change, or an indicated skill
 update. Organization workflows and storage conventions belong in that backend
 skill, not in these instructions.
 
-On start or resume, read the relevant saved context before acting. Venom preserves
-human intent, constraints, decisions and rationale, and the context needed to
-resume work. Code remains authoritative for implementation; link to it rather
-than maintain a second explanation of it.
+On start or resume, read relevant project and task context before acting. The
+loaded skill explains focused discovery, task briefs, editable logs, and recovery.
+Teams focus what appears by default; broaden discovery deliberately when needed.
+
+Venom preserves human intent, constraints, decisions and rationale, and the
+context needed to resume work. Code remains authoritative for implementation;
+link to it rather than maintain a second explanation of it.
 
 Write only when a future session needs meaningful new context that is not already
 maintained elsewhere. Prefer skipping, linking, or updating an existing record

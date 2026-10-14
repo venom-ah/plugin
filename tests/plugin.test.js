@@ -43,7 +43,7 @@ test('distribution manifests and marketplace retain host-managed MCP', () => {
   assert.equal(entry.policy.authentication, 'ON_INSTALL');
 });
 
-test('loader delegates storage conventions and makes writing conditional', () => {
+test('loader delegates project workflows and makes writing conditional', () => {
   assert.match(canonical, /`session-start`/);
   assert.match(canonical, /native skills when this connection/);
   assert.match(canonical, /supplied by the Venom server/);
@@ -51,6 +51,9 @@ test('loader delegates storage conventions and makes writing conditional', () =>
   assert.match(canonical, /Do not use\nanother loading route to bypass/);
   assert.match(canonical, /organization change/);
   assert.match(canonical, /indicated skill\nupdate/);
+  assert.match(canonical, /relevant project and task context/);
+  assert.match(canonical, /focused discovery, task briefs, editable logs, and recovery/);
+  assert.match(canonical, /Teams focus what appears by default/);
   assert.match(canonical, /human intent, constraints, decisions and rationale/);
   assert.match(canonical, /Successful sessions can make zero writes/);
   assert.match(canonical, /verify saves/);
