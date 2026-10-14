@@ -43,7 +43,7 @@ test('distribution manifests and marketplace retain host-managed MCP', () => {
   assert.equal(entry.policy.authentication, 'ON_INSTALL');
 });
 
-test('loader delegates storage conventions and requires verified lifecycle checkpoints', () => {
+test('loader delegates project workflows and requires meaningful verified saves', () => {
   assert.match(canonical, /`session-start`/);
   assert.match(canonical, /native skills when this connection/);
   assert.match(canonical, /supplied by the Venom server/);
@@ -51,10 +51,10 @@ test('loader delegates storage conventions and requires verified lifecycle check
   assert.match(canonical, /Do not use\nanother loading route to bypass/);
   assert.match(canonical, /organization change/);
   assert.match(canonical, /indicated skill\nupdate/);
-  assert.match(canonical, /shared source of truth for project status/);
-  assert.match(canonical, /meaningful milestones/);
+  assert.match(canonical, /relevant project and task context/);
+  assert.match(canonical, /Preserve meaningful changes/);
   assert.match(canonical, /verify saves/);
-  assert.match(canonical, /before writing the\nfinal answer/);
+  assert.match(canonical, /Skip writes when nothing/);
   assert.match(canonical, /Avoid routine save announcements/);
   assert.match(canonical, /Venom was not updated/);
   assert.doesNotMatch(canonical, /`me`|hooks\/session-start|brains\/|projects\/|knowledge\/|tasks\//);
