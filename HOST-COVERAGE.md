@@ -2,7 +2,7 @@
 
 The design has two parts: authenticated MCP provides the organization's
 published `session-start` skill; a small host reminder directs the model to
-load it and save useful progress. Native skill loading is preferred when offered by the host. Otherwise
+load it and preserve only necessary context. Native skill loading is preferred when offered by the host. Otherwise
 the server's advertised `venom_skill_session_start` tool loads the same content.
 Tool prefixes are discovered, not guessed. A disabled or rejected native skill
 must not be accessed through the fallback to bypass the user's choice.
@@ -12,9 +12,9 @@ every agent behaves identically. All adapters use the development endpoint.
 
 | Host | Implemented delivery | Limit that remains |
 | --- | --- | --- |
-| Codex | Plugin MCP; `SessionStart`, `SubagentStart`, `UserPromptSubmit`; task-status `PostToolUse` | Hooks must be enabled and trusted; Node must be available. SessionStart covers context restoration supported by the host. Save reminders run before the final answer; no forced completion pass. [Official hooks reference](https://learn.chatgpt.com/docs/hooks) |
-| Claude Code | Plugin MCP and the same four hook events | Hook trust and tool approvals remain host-owned; `SessionStart` runs after compaction. No Stop/SubagentStop continuation is installed. [Official hooks reference](https://code.claude.com/docs/en/hooks) |
-| Gemini CLI | Separate extension bundle with `contextFileName: VENOM.md`, `SessionStart`, `BeforeAgent` | Persistent context and the next BeforeAgent reminder restore the entry point. No AfterAgent continuation is installed; timeouts are milliseconds. [Extension reference](https://geminicli.com/docs/extensions/reference/), [hook reference](https://geminicli.com/docs/hooks/reference/) |
+| Codex | Plugin MCP; `SessionStart`, `SubagentStart` | Hooks must be enabled and trusted; Node must be available. SessionStart covers context restoration supported by the host. No per-prompt, tool, or completion save reminders. [Official hooks reference](https://learn.chatgpt.com/docs/hooks) |
+| Claude Code | Plugin MCP and the same two hook events | Hook trust and tool approvals remain host-owned; `SessionStart` runs after compaction. No Stop/SubagentStop continuation is installed. [Official hooks reference](https://code.claude.com/docs/en/hooks) |
+| Gemini CLI | Separate extension bundle with `contextFileName: VENOM.md`, `SessionStart` | Persistent context and SessionStart provide the entry point. No AfterAgent continuation is installed; timeouts are milliseconds. [Extension reference](https://geminicli.com/docs/extensions/reference/), [hook reference](https://geminicli.com/docs/hooks/reference/) |
 | Cursor Agent | HTTP MCP plus an always-applied `.mdc` rule | Rules apply to Agent conversations; this does not configure inline completion or Bugbot. [MCP](https://docs.cursor.com/context/model-context-protocol), [rules](https://prod.cursor.com/docs/rules) |
 | Kiro IDE / CLI | MCP plus always-included steering | Custom agents require the steering resource in their configuration; no claim of a universal session event across Kiro surfaces. [MCP](https://kiro.dev/docs/mcp/), [steering](https://kiro.dev/docs/steering/) |
 | OpenCode | Remote MCP plus `instructions: ["VENOM.md"]` | Merge with existing instructions. Host manages remote OAuth. [MCP](https://opencode.ai/docs/mcp-servers/), [rules](https://opencode.ai/docs/rules/) |
@@ -44,84 +44,25 @@ duplicate auto-discovery. Gemini's separate package generates that default file
 with its own events, path variable, and millisecond timeouts. All three use the
 same reminder script. No runtime dependency or authentication client is added.
 
-## Lifecycle findings and changes
+## Selective persistence
 
-The installed Ponytail 4.10.0 reference uses `SessionStart`, `SubagentStart`,
-and `UserPromptSubmit` in `hooks/claude-codex-hooks.json`. Venom uses
-those events plus focused task-status reminders. Both now avoid forcing another
-model pass after completion; instruction delivery does not guarantee persistence.
+Only `SessionStart` and `SubagentStart` inject guidance. Gemini uses SessionStart
+and its persistent context file. Per-prompt and task-tool hooks are removed;
+stale prompt, tool, and completion invocations produce no output. Version 0.3.3
+already removed forced completion turns; this change removes the remaining
+repeated write reminders. Restart updated hosts to unload cached registrations.
 
-### Ponytail comparison
+`VENOM.md` is canonical; persistent adapters are generated from it. The guidance
+prioritizes reading, allows zero-write sessions, and saves only useful context
+that is not already maintained elsewhere. Consequential decisions and recovery
+context should be saved when losing them would change the next action. Subagents
+return findings to the parent unless assigned a distinct write scope.
 
-Reviewed the installed Ponytail 4.10.0 manifests; `claude-codex-hooks.json`;
-activation, subagent, mode-tracker, runtime, instruction-builder, and configuration
-scripts; Windows/hook regressions; Cursor/Copilot/Qoder adapters; and Gemini
-manifest. This comparison concerns reminder delivery, not Ponytail's unrelated
-personality modes or statusline features.
-
-| Concern | Ponytail 4.10.0 | Venom 0.3.3 |
-| --- | --- | --- |
-| Startup selection | `startup\|resume\|clear\|compact` | No matcher: covers all startup sources, including Claude's `fork` event |
-| Registration | Both manifests explicitly select the shared hook file | Same explicit shared-file registration; no duplicate default file |
-| Commands | Plain `node`, quoted plugin root, five-second timeout | Same; removed `commandWindows` from the shared schema, matching Ponytail's #593 regression |
-| Model-visible output | Codex/subagents use `hookSpecificOutput.additionalContext`; Claude startup may use text | Valid structured context for both; Gemini retains its separate output shape |
-| Startup/subagent persistence | Injects the active instructions; subagent startup normally does not read stdin | Injects the loader plus save rules, without waiting for stdin; falls back to the bundled short reminder if `VENOM.md` is missing or empty |
-| Prompt behavior | Tracks mode commands; normally silent on ordinary Claude/Codex prompts | Explicit read/save reminder on every prompt; organization workflows remain in the server skill |
-| Input handling | Mode tracker reads prompt input | Context hooks do not read stdin; removed completion events produce no output |
-| Closed output | Attempts best-effort output | Handles asynchronous `EPIPE` without turning shutdown into a hook failure |
-| Completion | No Stop/SubagentStop or Gemini AfterAgent hook in the inspected reference | No completion hooks; save guidance and task-status checkpoints run within the normal turn |
-| Other hosts | Separate schemas or persistent rules; some optional native adapters | Existing persistent rule adapters and isolated Gemini package; no claim of native Cursor/Copilot/Qoder hook parity |
-| Drift checks | Rule copies, versions, hook commands and regression checks | Manifest versions, rule copies, unrestricted startup matching, schema fields, command execution, and Gemini artifact checked in tests |
-
-Mode flags, statusline notices, and command parsing are Ponytail-specific and do
-not provide Venom write verification. They are intentionally not copied. The
-comparison does not imply automatic persistence or universal host equivalence.
-
-Venom now reminds the agent to read saved status on startup, checkpoint useful
-changes at milestones and task-status changes, and verify saves before completion
-or handoff. All persistent host rule files are generated from `VENOM.md`.
-The organization's published skill still determines where and how to store it.
-
-`PostToolUse` matches only `TaskUpdate`, `TodoWrite`, `update_plan`, and
-`update_goal`. It reminds the agent to reconcile useful changed status after a
-task/plan update, without blocking the tool or treating its result as proof of
-completion. Venom writes do not match, so saving cannot trigger another save
-reminder. Other milestones rely on the persistent and per-prompt instructions.
-No task-completion or stop gate is installed.
-
-Versions 0.3.1–0.3.2 blocked the first `Stop`/`SubagentStop` (and Gemini
-`AfterAgent`) to request a final save pass. The retry guard prevented loops but
-did not check whether a save was needed. Codex turns this block into a new
-user-like continuation prompt; Claude re-prompts after its response, including
-when it already saved. Version 0.3.3 removes those registrations and their
-continuation code. Completion events stay silent even if invoked by stale
-configuration. Update the plugin and start a fresh task or restart the host to
-unload cached registrations and scripts.
-
-The startup, per-prompt, and milestone guidance asks the agent to save useful
-changes before writing its final answer, skip unchanged information, and avoid
-routine save announcements. Failed or unavailable saves must still be reported.
-This removes forced follow-ups without adding a worker or background uploader.
-
-`SessionEnd` cannot steer the departing agent in Codex, Claude, or Gemini.
-Codex also does not support MCP-tool hooks at SessionEnd. An extra shutdown
-hook printing a save instruction would provide false coverage, so saves happen
-before completion and planned shutdown. Abrupt termination, interruptions, and
-API failures can still lose progress since the last checkpoint. Pre-compaction
-events are not a portable opportunity for another agent tool pass; the startup
-restoration and prompt reminders reload the skill after context loss.
-
-Hooks do not fetch the skill or write data themselves: the model uses its
-host-authenticated connection. Disabled skills/connections, denied approvals,
-and user instructions remain authoritative. On failed or unavailable saves the
-agent must report unsaved status, never claim success, and hand it off. Subagents
-without write access return findings to their parent. Hosts with only rules
-receive the same save instructions but have no installed completion hook.
-
-This provides repeated reminders, not guaranteed continuous synchronization or
-proof that the latest status was saved. A stronger guarantee would require
-backend write receipts and host-specific enforcement, plus a recovery path for
-interrupted work. No such guarantee is claimed by this plugin.
+Hooks neither fetch skills nor write notes. The agent uses its authenticated
+connection; user instructions, disabled skills and denied approvals remain
+binding. Necessary failed saves must be reported. Startup guidance cannot
+ensure persistence during abrupt termination; no shutdown or background writer
+is installed.
 
 Claude and Codex resolve the plugin-root placeholder for the plain `node`
 command. The shared file contains no host-specific `commandWindows` field or
@@ -132,29 +73,17 @@ instructions remain available when the host delivers them.
 
 ## Verification and release gate
 
-Local checks exercise emitted JSON, prompt vs startup output, absence of
-completion registrations, silent completion events (already-saved, trivial, and
-unsaved turns), open stdin, task-tool matching, unknown-event silence, missing
-instruction-file fallback, closed output pipes, POSIX shell quoting (including
-spaces in installation paths), missing Node errors, Gemini package isolation,
-and canonical rule synchronization. Configuration checks cover each adapter's
-transport and instruction entry. Tests do not launch authenticated agent turns.
-CI is configured for Node 18/22 on Linux and Node 22 on Windows; the PowerShell
-execution test is skipped on macOS. Release notes record the checks actually run.
+Local checks exercise startup JSON, silent prompt/tool/completion events, open
+stdin, missing-instruction fallback, closed pipes, shell quoting, Gemini package
+isolation, adapter configuration, and canonical rule synchronization. Tests do
+not launch authenticated agent turns. The Windows execution check is skipped on
+macOS; CI covers Windows separately.
 
-Before claiming verified support for a host release, run a disposable
-organization trial: connect and authorize; start a substantive task; observe
-one successful session-start skill load from Venom; issue a second prompt and
-confirm reuse; restore or compact context and confirm reload when needed;
-start and finish a subagent where supported; change the organization's published skill
-and confirm the next fresh session receives it; disable the skill or deny
-approval and confirm no fallback bypass. Complete a task/plan step and observe
-the checkpoint reminder; finish substantive, already-saved, and trivial turns
-and confirm there is no Venom continuation prompt or post-answer save
-confirmation; verify the stored status from a fresh session. Repeat with Venom unavailable
-and ensure the agent reports unsaved status and stops without a loop. Finally perform a shared-note edit
-and verify that the backend rejects a stale replacement. Record host version
-and whether native skills or the fallback tool were used.
+Before claiming verified host behavior, run an authenticated trial: load the
+organization skill, resume after context loss, confirm trivial work creates no
+note, and preserve a consequential decision for a fresh session. Check that
+subagents do not duplicate parent notes and that disabled skills are respected.
+Record the host version and native or fallback skill-loading route.
 
 Hosts without a demonstrated host-managed OAuth connection are not presented
 as authenticated integrations merely because their settings accept a URL.
