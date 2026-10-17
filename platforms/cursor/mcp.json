@@ -2,7 +2,7 @@
   "_comment": "Reference template — copy into <project>/.cursor/mcp.json or ~/.cursor/mcp.json.",
   "mcpServers": {
     "venom": {
-      "url": "https://mcp.dev.venom-ah.com"
+      "url": "https://mcp.venomlabs.dev"
     }
   }
 }

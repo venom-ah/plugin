@@ -9,7 +9,7 @@ const path = require('node:path');
 
 const ROOT = path.join(__dirname, '..');
 const HOOKS_PATH = 'hooks/claude-codex-hooks.json';
-const MCP_URL = 'https://mcp.dev.venom-ah.com';
+const MCP_URL = 'https://mcp.venomlabs.dev';
 const read = (file) => fs.readFileSync(path.join(ROOT, file), 'utf8');
 const json = (file) => JSON.parse(read(file));
 const canonical = read('VENOM.md').trim();
