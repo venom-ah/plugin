@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "venom": {
-      "serverUrl": "https://mcp.dev.venom-ah.com"
+      "serverUrl": "https://mcp.venomlabs.dev"
     }
   }
 }

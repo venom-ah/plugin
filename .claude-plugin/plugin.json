@@ -1,13 +1,13 @@
 {
   "name": "venom",
-  "version": "0.3.4",
+  "version": "0.4.0",
   "hooks": "./hooks/claude-codex-hooks.json",
   "description": "Shared organization context through Venom MCP and its session-start skill.",
   "author": {
     "name": "Venom",
     "url": "https://github.com/venom-ah"
   },
-  "homepage": "https://venom-ah.com",
+  "homepage": "https://venomlabs.dev",
   "repository": "https://github.com/venom-ah/plugin",
   "mcpServers": "./.mcp.json"
 }

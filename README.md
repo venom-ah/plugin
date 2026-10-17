@@ -1,7 +1,7 @@
 # Venom agent plugin
 
 Venom provides shared organization context through the host-managed MCP
-connection at `https://mcp.dev.venom-ah.com`. The plugin asks the agent to load
+connection at `https://mcp.venomlabs.dev`. The plugin asks the agent to load
 Venom's published **`session-start`** skill. The backend supplies the default;
 each organization can customize and publish its own version.
 
